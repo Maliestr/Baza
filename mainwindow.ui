@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1100</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1100</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>База данных олимпийских чемпионов</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_3">
+    <item row="0" column="1" colspan="2">
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>Анкетные данные</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="1" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Дата рождения</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="de_birth"/>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Гражданство</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QListWidget" name="lw_citizen">
+           <property name="currentRow">
+            <number>-1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>Россия</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Украина</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Польша</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Болгария</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Бразилия</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>ФИО</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="le_fio"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="1" colspan="2">
+     <layout class="QHBoxLayout" name="horizontalLayout_8">
+      <item>
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Дисциплина</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListWidget" name="lw_discipline">
+        <property name="currentRow">
+         <number>-1</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>бег на 100 м</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>бег с барьерами на 110 м</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>прыжки в высоту</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>прыжки с шестом</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>метание диска</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>шорт-трек 1 км</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>бег на коньках 5000 м</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>бег на лыжах 40 км</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>биатлон, масс-старт, 40 км</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="3" column="1" colspan="2">
+     <layout class="QHBoxLayout" name="horizontalLayout_9">
+      <item>
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Занятое место</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="sb_place"/>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="1" colspan="2">
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="title">
+       <string>Олимпиада</string>
+      </property>
+      <layout class="QFormLayout" name="formLayout">
+       <item row="1" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <item>
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Год проведения</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="sb_year_event"/>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <item>
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Страна проведения</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QListWidget" name="lw_country">
+           <property name="currentRow">
+            <number>-1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>СССР</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Китай</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>США</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Канада</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Тип олимпиады</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QListWidget" name="lw_olympiad">
+           <property name="currentRow">
+            <number>-1</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>летняя</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>зимняя</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="5" column="1" colspan="2">
+     <widget class="QCheckBox" name="cb_have_record">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>Наличие рекорда</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" rowspan="4">
+     <widget class="QListWidget" name="lw_browser"/>
+    </item>
+    <item row="5" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="pb_create">
+        <property name="text">
+         <string>Создать</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pb_remove">
+        <property name="text">
+         <string>Удалить</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="6" column="0">
+     <widget class="QPushButton" name="pb_fill">
+      <property name="text">
+       <string>Заполнить</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1100</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Файл</string>
+    </property>
+    <addaction name="create_file"/>
+    <addaction name="open_file"/>
+    <addaction name="save_file"/>
+    <addaction name="save_file_how"/>
+   </widget>
+   <addaction name="menu"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="save_file">
+   <property name="text">
+    <string>Сохранить файл</string>
+   </property>
+  </action>
+  <action name="open_file">
+   <property name="text">
+    <string>Открыть файл</string>
+   </property>
+  </action>
+  <action name="save_file_how">
+   <property name="text">
+    <string>Сохранить файл как</string>
+   </property>
+  </action>
+  <action name="create_file">
+   <property name="text">
+    <string>Создать файл</string>
+   </property>
+  </action>
+ </widget>
+ <tabstops>
+  <tabstop>pb_fill</tabstop>
+  <tabstop>pb_create</tabstop>
+  <tabstop>pb_remove</tabstop>
+  <tabstop>le_fio</tabstop>
+  <tabstop>de_birth</tabstop>
+  <tabstop>lw_citizen</tabstop>
+  <tabstop>lw_olympiad</tabstop>
+  <tabstop>sb_year_event</tabstop>
+  <tabstop>lw_country</tabstop>
+  <tabstop>lw_discipline</tabstop>
+  <tabstop>sb_place</tabstop>
+  <tabstop>cb_have_record</tabstop>
+  <tabstop>lw_browser</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
