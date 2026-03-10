@@ -36,7 +36,7 @@ private:
     int nextId = 1;
 
     bool loadingInProgress = false;
-    QString currentFile;
+//    QString currentFile;
 
     void setupConnections();
     void sortingList();
@@ -54,7 +54,7 @@ private slots:
     void sl_fill();
     void sl_create();
     void sl_delete();
-//    void save_File();
+    void save_File();
 //    void save_File_how();
     void open_File();
 //    void create_File();

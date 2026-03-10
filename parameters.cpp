@@ -102,21 +102,21 @@ const QVector<BrowserItem> Workbase::records() const
     return result;
 }
 
-bool Workbase::save(QString filename) const
-{
-    QFile file(filename);
-    if(!file.open(QIODevice::WriteOnly))
-        return false;
+//bool Workbase::save(QString filename) const
+//{
+//    QFile file(filename);
+//    if(!file.open(QIODevice::WriteOnly))
+//        return false;
 
-    QTextStream out(&file);
-    out.setCodec("UTF-8");
-    out << m_nextId << "\n";
+//    QTextStream out(&file);
+//    out.setCodec("UTF-8");
+//    out << m_nextId << "\n";
 
-    for (const Parameters &record : Db.values())
-        out << record;
-    file.close();
-    return true;
-}
+//    for (const Parameters &record : Db.values())
+//        out << record;
+//    file.close();
+//    return true;
+//}
 
 //bool Workbase::load(QString filename) //Функция загрузки
 //{
@@ -240,6 +240,88 @@ bool Workbase::load()
     delete[] buffer;
     m_modified = false;
     return true;
+}
+
+bool Workbase::save()
+{
+    // Создаем или открываем файл для записи
+    HANDLE file = CreateFile(L"../Baza/okak.txt", GENERIC_WRITE, 0, NULL,
+                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+        return false;
+
+    // Получаем все записи в отсортированном порядке
+    QList<Parameters> sortedList = Db.values();
+    std::sort(sortedList.begin(), sortedList.end(), [](const Parameters &a, const Parameters &b) {
+        return a < b;
+    });
+
+    // Формируем буфер для записи
+    QByteArray buffer;
+
+    // Добавляем m_nextId
+    buffer += QByteArray::number(m_nextId);
+    buffer += '\n';
+
+    // Добавляем каждую запись
+    for (const Parameters &record : sortedList)
+    {
+        // ID
+        buffer += QByteArray::number(record.id);
+        buffer += ' ';
+
+        // ФИО в кавычках
+        buffer += '"';
+        buffer += record.FIO.toUtf8();
+        buffer += '"';
+        buffer += ' ';
+
+        // Дата
+        buffer += record.DateBirth.toString("yyyy-MM-dd").toUtf8();
+        buffer += ' ';
+
+        // citizen
+        buffer += QByteArray::number(static_cast<int>(record.citizen));
+        buffer += ' ';
+
+        // type
+        buffer += QByteArray::number(static_cast<int>(record.type));
+        buffer += ' ';
+
+        // YearEvent
+        buffer += QByteArray::number(record.YearEvent);
+        buffer += ' ';
+
+        // country
+        buffer += QByteArray::number(static_cast<int>(record.country));
+        buffer += ' ';
+
+        // discipline
+        buffer += QByteArray::number(static_cast<int>(record.discipline));
+        buffer += ' ';
+
+        // Place
+        buffer += QByteArray::number(record.Place);
+        buffer += ' ';
+
+        // Record
+        buffer += QByteArray::number(record.Record ? 1 : 0);
+        buffer += '\n';
+    }
+
+    // Записываем буфер в файл через WinAPI
+    DWORD bytesWritten;
+    BOOL writeResult = WriteFile(file, buffer.constData(), buffer.size(), &bytesWritten, NULL);
+
+    CloseHandle(file);
+
+    if (bytesWritten == buffer.size())
+    {
+        m_modified = false; // Сбрасываем флаг изменений после успешного сохранения
+        return true;
+    }
+
+    return false;
 }
 
 void Workbase::clear()

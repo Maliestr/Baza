@@ -10,7 +10,6 @@ MainWindow::MainWindow(QWidget *parent) //Логика пользователь�
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , valFio(QRegExp("^([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)$")) //пробел вначале нельзя поставить
-    , currentFile("")
     , nextId(1)
 {
     ui->setupUi(this);
@@ -406,17 +405,17 @@ int MainWindow::generateId()
     return nextId++;
 }
 
-//void MainWindow::save_File()
-//{
+void MainWindow::save_File()
+{
 //    if (currentFile.isEmpty()) {
 //        save_File_how();
 //        return;
 //    }
 
-//    if (!workbase.save(currentFile)) {
-//        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
-//    }
-//}
+    if (!workbase.save()) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
+    }
+}
 
 //void MainWindow::save_File_how() {
 //    QString fileName = QFileDialog::getSaveFileName(this,
@@ -524,7 +523,8 @@ void MainWindow::open_File() //Открыть файл
 
 //void MainWindow::closeEvent(QCloseEvent *event)
 //{
-//    if (workbase.isModified()) {
+//    if (workbase.isModified())
+//    {
 //        QMessageBox::StandardButton reply;
 //        reply = QMessageBox::question(this, "Несохраненные изменения",
 //                                     "У вас есть несохраненные изменения. Хотите сохранить перед выходом?",
@@ -540,14 +540,22 @@ void MainWindow::open_File() //Открыть файл
 //        else {
 //            event->ignore(); // Отменяем закрытие
 //        }
-//    } else {
+//    }
+//    else
+//    {
 //        event->accept(); // Закрываем если нет изменений
 //    }
 //}
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-
+    if (workbase.isModified())
+    {
+        save_File();
+        event->accept(); // Закрываем программу
+    }
+    else
+        event->accept();
 }
 
 MainWindow::~MainWindow()
