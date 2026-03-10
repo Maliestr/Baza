@@ -1,10 +1,11 @@
+#include <windows.h>
 #include "parameters.h"
 #include <QDebug>
 #include <QString>
 #include <QDate>
 #include <QFile>
 
-Parameters::Parameters()
+Parameters::Parameters() //Логика данных
     : FIO(""),
       DateBirth(1850, 1, 1),
       citizen(Russia),
@@ -117,30 +118,126 @@ bool Workbase::save(QString filename) const
     return true;
 }
 
-bool Workbase::load(QString filename)
-{
-    QFile file(filename);
-    if(!file.open(QIODevice::ReadOnly))
-        return false;
+//bool Workbase::load(QString filename) //Функция загрузки
+//{
+//    QFile file(filename);
+//    if(!file.open(QIODevice::ReadOnly)) //Не открылся только для чтения
+//        return false;
 
-    QTextStream in(&file);
-    in.setCodec("UTF-8");
+//    QTextStream in(&file);
+//    in.setCodec("UTF-8");
+
+//    clear();
+
+//    in >> m_nextId;
+//    in.skipWhiteSpace();
+
+//    bool loads = true;
+//    while (!in.atEnd()) {
+//        Parameters record;
+//        in >> record; //выводим данные (или строки) из потока в record
+//        if (in.status() == QTextStream::Ok)
+//            Db.insert(record.id, record); //Добавляем данные базу Db
+//        else
+//            loads = false;
+//    }
+//    file.close();
+//    m_modified = false;
+//    return true;
+//}
+
+bool Workbase::load()
+{
+    HANDLE file = CreateFile(L"../Baza/okak.txt", GENERIC_READ, 0, NULL,
+                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) return false;
+
+    DWORD fileSize = GetFileSize(file, NULL);
+    if (fileSize == INVALID_FILE_SIZE) { CloseHandle(file); return false; }
+
+    char* buffer = new char[fileSize + 1];
+    DWORD bytesRead;
+    if (!ReadFile(file, buffer, fileSize, &bytesRead, NULL) || bytesRead != fileSize)
+    {
+        delete[] buffer;
+        CloseHandle(file);
+        return false;
+    }
+    buffer[fileSize] = '\0'; //+1
+    CloseHandle(file);
 
     clear();
 
-    in >> m_nextId;
-    in.skipWhiteSpace();
+    char* ptr = buffer;
+    char* end = buffer + fileSize;
 
-    bool loads = true;
-    while (!in.atEnd()) {
+    // Читаем m_nextId
+    while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+    m_nextId = 0;
+    while (ptr < end && *ptr >= '0' && *ptr <= '9')
+        m_nextId = m_nextId * 10 + (*ptr++ - '0');
+
+    // Читаем записи
+    while (ptr < end)
+    {
         Parameters record;
-        in >> record;
-        if (in.status() == QTextStream::Ok)
-            Db.insert(record.id, record);
-        else
-            loads = false;
+
+        // Пропускаем нецифровые символы до id
+        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+        if (ptr >= end) break;
+
+        // Читаем id
+        record.id = 0;
+        while (ptr < end && *ptr >= '0' && *ptr <= '9')
+            record.id = record.id * 10 + (*ptr++ - '0');
+
+        // Ищем открывающую кавычку
+        while (ptr < end && *ptr != '"') ptr++;
+        if (ptr >= end) break;
+        ptr++; // Пропускаем "
+
+        // Читаем ФИО
+        char fioBuf[256] = {0};
+        int i = 0;
+        while (ptr < end && *ptr != '"' && i < 255)
+            fioBuf[i++] = *ptr++;
+        record.FIO = QString::fromUtf8(fioBuf, i);
+        if (ptr < end && *ptr == '"') ptr++;
+
+        // Пропускаем до даты
+        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+
+        // Читаем дату (10 символов: ГГГГ-ММ-ДД)
+        if (ptr + 10 <= end)
+        {
+            char dateBuf[11] = {0};
+            memcpy(dateBuf, ptr, 10);
+            record.DateBirth = QDate::fromString(QString::fromUtf8(dateBuf), "yyyy-MM-dd");
+            ptr += 10;
+        }
+
+        // Читаем остальные 7 чисел
+        int vals[7];
+        for (int& val : vals)
+        {
+            while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+            val = 0;
+            while (ptr < end && *ptr >= '0' && *ptr <= '9')
+                val = val * 10 + (*ptr++ - '0');
+        }
+
+        record.citizen = static_cast<Parameters::Citizen>(vals[0]);
+        record.type = static_cast<Parameters::TypeOlympiad>(vals[1]);
+        record.YearEvent = vals[2];
+        record.country = static_cast<Parameters::CountryEvent>(vals[3]);
+        record.discipline = static_cast<Parameters::Discipline>(vals[4]);
+        record.Place = vals[5];
+        record.Record = vals[6] != 0;
+
+        Db.insert(record.id, record);
     }
-    file.close();
+
+    delete[] buffer;
     m_modified = false;
     return true;
 }

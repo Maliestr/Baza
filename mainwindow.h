@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <windows.h>
 #include <QMainWindow>
 #include <QLineEdit>
 #include <QDate>

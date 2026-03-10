@@ -1,3 +1,4 @@
+#include <windows.h>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
@@ -5,7 +6,7 @@
 #include <QCloseEvent>
 #include "parameters.h"
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget *parent) //Логика пользовательского интерфейса
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , valFio(QRegExp("^([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)$")) //пробел вначале нельзя поставить
@@ -43,6 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     QListWidgetItem* item = new QListWidgetItem("Год проведения\tДисциплина\t\tФИО");
     ui->lw_browser->addItem(item);
+
+    open_File();
 }
 
 void MainWindow::setupConnections() //Обработка сигналов (кликов)
@@ -67,7 +70,7 @@ void MainWindow::setupConnections() //Обработка сигналов (кл�
     connect(ui->pb_remove, SIGNAL(clicked()), this, SLOT(sl_delete()));
 
     connect(ui->create_file, SIGNAL(triggered()), this, SLOT(create_File()));
-    connect(ui->open_file, SIGNAL(triggered()), this, SLOT(open_File()));
+//    connect(ui->open_file, SIGNAL(triggered()), this, SLOT(open_File()));
     connect(ui->save_file, SIGNAL(triggered()), this, SLOT(save_File()));
     connect(ui->save_file_how, SIGNAL(triggered()), this, SLOT(save_File_how()));
 }
@@ -108,9 +111,9 @@ void MainWindow::sl_choose_discipline(int value) //Выбор дисциплин
     }
 }
 
-void MainWindow::sl_saveData()
+void MainWindow::sl_saveData() //Сохранение
 {
-    if (loadingInProgress) return;
+    if (loadingInProgress) return; //Загрузка в процессе
 
     int row = ui->lw_browser->currentRow();
     if (row <= 0) return;
@@ -151,24 +154,24 @@ void MainWindow::sl_saveData()
     sortingList();
 }
 
-void MainWindow::updateSingleItem(int recordId)
-{
-    Parameters record;
-    if (!workbase.record(recordId, record)) return;
+//void MainWindow::updateSingleItem(int recordId) //Обновление текста для одной конкретной записи
+//{
+//    Parameters record;
+//    if (!workbase.record(recordId, record)) return;
 
-    for (int i = 1; i < ui->lw_browser->count(); ++i) {
-        if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == recordId) {
-            ui->lw_browser->item(i)->setText(
-                QString("%1\t\t%2\t\t%3")
-                    .arg(record.YearEvent)
-                    .arg(disciplineToString(record.discipline))
-                    .arg(record.FIO));
-            return;
-        }
-    }
-}
+//    for (int i = 1; i < ui->lw_browser->count(); ++i) {
+//        if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == recordId) {
+//            ui->lw_browser->item(i)->setText(
+//                QString("%1\t\t%2\t\t%3")
+//                    .arg(record.YearEvent)
+//                    .arg(disciplineToString(record.discipline))
+//                    .arg(record.FIO));
+//            return;
+//        }
+//    }
+//}
 
-void MainWindow::updateList(int index)
+void MainWindow::updateList(int index) //Обновление текста одной конкретной записи
 {
     Parameters up;
     if (!workbase.record(index, up)) return;
@@ -194,7 +197,7 @@ void MainWindow::updateList(int index)
     }
 }
 
-void MainWindow::sl_delete()
+void MainWindow::sl_delete() //кнопка удаления
 {
     int row = ui->lw_browser->currentRow();
     if (row <= 0) return;
@@ -225,7 +228,7 @@ void MainWindow::sl_delete()
     }
 }
 
-void MainWindow::showCurrentRecord(int current)
+void MainWindow::showCurrentRecord(int current) //Отображение данных в правой части окна
 {
     if (current <= 0) return;
 
@@ -254,7 +257,7 @@ void MainWindow::showCurrentRecord(int current)
     }
 }
 
-void MainWindow::sl_have_record(int value)
+void MainWindow::sl_have_record(int value) //Слот для отработки кнопки "Установить рекорд"
 {
     if (value == 1)
     {
@@ -267,7 +270,7 @@ void MainWindow::sl_have_record(int value)
     }
 }
 
-void MainWindow::sl_fill()
+void MainWindow::sl_fill() //Показывает в браузере по нажатию кнопки "Заполнить"
 {
     QStringList name =
     {
@@ -306,7 +309,7 @@ void MainWindow::sl_fill()
     ui->pb_fill->setVisible(false); //кнопка исчезает
 }
 
-void MainWindow::sortingList()
+void MainWindow::sortingList() //Сортировка
 {
     QSignalBlocker blocker(ui->lw_browser);
 
@@ -425,37 +428,41 @@ void MainWindow::save_File_how() {
     save_File();
 }
 
-void MainWindow::open_File()
+void MainWindow::open_File() //Открыть файл
 {
-    if (workbase.isModified()) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Несохраненные изменения",
-             "У вас есть несохраненные изменения. Хотите сохранить перед открытием другого файла?",
-             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+//    if (workbase.isModified()) {
+//        QMessageBox::StandardButton reply;
+//        reply = QMessageBox::question(this, "Несохраненные изменения",
+//             "У вас есть несохраненные изменения. Хотите сохранить перед открытием другого файла?",
+//             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
-        if (reply == QMessageBox::Yes) {
-            save_File(); // Сохраняем текущий файл
-        }
-        else if (reply == QMessageBox::Cancel) {
-            return; // Отменяем создание нового файла
-        }
-    }
+//        if (reply == QMessageBox::Yes) {
+//            save_File(); // Сохраняем текущий файл
+//        }
+//        else if (reply == QMessageBox::Cancel) {
+//            return; // Отменяем создание нового файла
+//        }
+//    }
 
-    QString fileName = QFileDialog::getOpenFileName(this,
-        "Открыть файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
+//    QString fileName = QFileDialog::getOpenFileName(this,
+//        "Открыть файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
 
-    if (fileName.isEmpty()) return;
 
-    currentFile = fileName;
+//    if (fileName.isEmpty()) return;
 
-    workbase.clear();
-    while (ui->lw_browser->count() > 1) {
-        delete ui->lw_browser->takeItem(1);
-    }
+//    currentFile = fileName;
 
-    loadingInProgress = true;
+//    workbase.clear();
+//    while (ui->lw_browser->count() > 1) {
+//        delete ui->lw_browser->takeItem(1);
+//    }
 
-    if (!workbase.load(currentFile)) {
+//    loadingInProgress = true;
+
+
+
+    if (!workbase.load()) //Загрузка данных в базу
+    {
         QMessageBox::warning(this, "Ошибка", "Не удалось загрузить файл");
         loadingInProgress = false;
         return;

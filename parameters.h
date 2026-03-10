@@ -1,6 +1,7 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#include <windows.h>
 #include <QString>
 #include <QDate>
 #include <QMetaType>
@@ -54,7 +55,7 @@ public:
     bool record(unsigned int id, Parameters &record) const;
     const QVector<BrowserItem> records() const;
     bool save(QString filename) const;
-    bool load(QString filename);
+    bool load();
     void clear();
     bool isModified() const;
     QList<Parameters> values() const
