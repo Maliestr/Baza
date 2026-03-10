@@ -69,10 +69,10 @@ void MainWindow::setupConnections() //Обработка сигналов (кл�
     connect(ui->pb_create, SIGNAL(clicked()), this, SLOT(sl_create()));
     connect(ui->pb_remove, SIGNAL(clicked()), this, SLOT(sl_delete()));
 
-    connect(ui->create_file, SIGNAL(triggered()), this, SLOT(create_File()));
+//    connect(ui->create_file, SIGNAL(triggered()), this, SLOT(create_File()));
 //    connect(ui->open_file, SIGNAL(triggered()), this, SLOT(open_File()));
-    connect(ui->save_file, SIGNAL(triggered()), this, SLOT(save_File()));
-    connect(ui->save_file_how, SIGNAL(triggered()), this, SLOT(save_File_how()));
+//    connect(ui->save_file, SIGNAL(triggered()), this, SLOT(save_File()));
+//    connect(ui->save_file_how, SIGNAL(triggered()), this, SLOT(save_File_how()));
 }
 
 void MainWindow::sl_Year_Event(int value) //Валидатор для дат
@@ -406,27 +406,27 @@ int MainWindow::generateId()
     return nextId++;
 }
 
-void MainWindow::save_File()
-{
-    if (currentFile.isEmpty()) {
-        save_File_how();
-        return;
-    }
+//void MainWindow::save_File()
+//{
+//    if (currentFile.isEmpty()) {
+//        save_File_how();
+//        return;
+//    }
 
-    if (!workbase.save(currentFile)) {
-        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
-    }
-}
+//    if (!workbase.save(currentFile)) {
+//        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
+//    }
+//}
 
-void MainWindow::save_File_how() {
-    QString fileName = QFileDialog::getSaveFileName(this,
-        "Сохранить файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
+//void MainWindow::save_File_how() {
+//    QString fileName = QFileDialog::getSaveFileName(this,
+//        "Сохранить файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
 
-    if (fileName.isEmpty()) return;
+//    if (fileName.isEmpty()) return;
 
-    currentFile = fileName;
-    save_File();
-}
+//    currentFile = fileName;
+//    save_File();
+//}
 
 void MainWindow::open_File() //Открыть файл
 {
@@ -487,62 +487,67 @@ void MainWindow::open_File() //Открыть файл
         currentId = -1;
 }
 
-void MainWindow::create_File()
-{
-    if (workbase.isModified()) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Несохраненные изменения",
-             "У вас есть несохраненные изменения. Хотите сохранить перед созданием нового файла?",
-             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+//void MainWindow::create_File()
+//{
+//    if (workbase.isModified()) {
+//        QMessageBox::StandardButton reply;
+//        reply = QMessageBox::question(this, "Несохраненные изменения",
+//             "У вас есть несохраненные изменения. Хотите сохранить перед созданием нового файла?",
+//             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
-        if (reply == QMessageBox::Yes) {
-            save_File(); // Сохраняем текущий файл
-        }
-        else if (reply == QMessageBox::Cancel) {
-            return; // Отменяем создание нового файла
-        }
-    }
+//        if (reply == QMessageBox::Yes) {
+//            save_File(); // Сохраняем текущий файл
+//        }
+//        else if (reply == QMessageBox::Cancel) {
+//            return; // Отменяем создание нового файла
+//        }
+//    }
 
-    workbase.clear();
-    nextId = 1;
-    currentFile.clear();
+//    workbase.clear();
+//    nextId = 1;
+//    currentFile.clear();
 
-    while (ui->lw_browser->count() > 1) {
-        delete ui->lw_browser->takeItem(1);
-    }
+//    while (ui->lw_browser->count() > 1) {
+//        delete ui->lw_browser->takeItem(1);
+//    }
 
-    ui->le_fio->clear();
-    ui->de_birth->setDate(QDate(1850, 1, 1));
-    ui->lw_citizen->setCurrentRow(-1);
-    ui->lw_olympiad->setCurrentRow(-1);
-    ui->sb_year_event->setValue(1896);
-    ui->lw_country->setCurrentRow(-1);
-    ui->lw_discipline->setCurrentRow(-1);
-    ui->sb_place->setValue(1);
-    ui->cb_have_record->setChecked(false);
-}
+//    ui->le_fio->clear();
+//    ui->de_birth->setDate(QDate(1850, 1, 1));
+//    ui->lw_citizen->setCurrentRow(-1);
+//    ui->lw_olympiad->setCurrentRow(-1);
+//    ui->sb_year_event->setValue(1896);
+//    ui->lw_country->setCurrentRow(-1);
+//    ui->lw_discipline->setCurrentRow(-1);
+//    ui->sb_place->setValue(1);
+//    ui->cb_have_record->setChecked(false);
+//}
+
+//void MainWindow::closeEvent(QCloseEvent *event)
+//{
+//    if (workbase.isModified()) {
+//        QMessageBox::StandardButton reply;
+//        reply = QMessageBox::question(this, "Несохраненные изменения",
+//                                     "У вас есть несохраненные изменения. Хотите сохранить перед выходом?",
+//                                     QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+
+//        if (reply == QMessageBox::Yes) {
+//            save_File();
+//            event->accept(); // Закрываем программу
+//        }
+//        else if (reply == QMessageBox::No) {
+//            event->accept(); // Закрываем без сохранения
+//        }
+//        else {
+//            event->ignore(); // Отменяем закрытие
+//        }
+//    } else {
+//        event->accept(); // Закрываем если нет изменений
+//    }
+//}
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (workbase.isModified()) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "Несохраненные изменения",
-                                     "У вас есть несохраненные изменения. Хотите сохранить перед выходом?",
-                                     QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
-        if (reply == QMessageBox::Yes) {
-            save_File();
-            event->accept(); // Закрываем программу
-        }
-        else if (reply == QMessageBox::No) {
-            event->accept(); // Закрываем без сохранения
-        }
-        else {
-            event->ignore(); // Отменяем закрытие
-        }
-    } else {
-        event->accept(); // Закрываем если нет изменений
-    }
 }
 
 MainWindow::~MainWindow()

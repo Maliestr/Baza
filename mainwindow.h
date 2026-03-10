@@ -54,9 +54,9 @@ private slots:
     void sl_fill();
     void sl_create();
     void sl_delete();
-    void save_File();
-    void save_File_how();
+//    void save_File();
+//    void save_File_how();
     void open_File();
-    void create_File();
+//    void create_File();
 };
 #endif // MAINWINDOW_H
