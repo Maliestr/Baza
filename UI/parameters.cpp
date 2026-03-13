@@ -148,7 +148,7 @@ const QVector<BrowserItem> Workbase::records() const
 
 bool Workbase::load()
 {
-    HANDLE file = CreateFile(L"../Baza/okak.txt", GENERIC_READ, 0, NULL,
+    HANDLE file = CreateFile(L"../Baza/UI/okak.txt", GENERIC_READ, 0, NULL,
                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) return false;
 
@@ -245,7 +245,7 @@ bool Workbase::load()
 bool Workbase::save()
 {
     // Создаем или открываем файл для записи
-    HANDLE file = CreateFile(L"../Baza/okak.txt", GENERIC_WRITE, 0, NULL,
+    HANDLE file = CreateFile(L"../Baza/UI/okak.txt", GENERIC_WRITE, 0, NULL,
                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE)
         return false;
