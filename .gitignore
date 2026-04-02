@@ -1,5 +1,9 @@
 build_Server/
 build_UI/
+server2/.vs
+server2/server2
 
 UI/Baza.pro.user
 Server/Server.pro.user
+server2/server2.vcxproj.user
+server2/x64/Debug/server2.pdb

@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
+#include <QTimer>
 #include <QFileDialog>
 #include <QCloseEvent>
 #include "parameters.h"
@@ -17,6 +18,15 @@ MainWindow::MainWindow(QWidget *parent) //Логика пользователь�
     ui->lw_browser->setFocus();
 
     setupConnections();
+
+    connect(&pipe, &Pipe::connected, this, [this]()
+    {
+//        pipe.ConnectPipe();
+    });
+
+    pipe.StartServer();
+
+    QTimer::singleShot(2000, &pipe, &Pipe::ConnectPipe);
 
     ui->le_fio->setValidator(&valFio); //валидатор для ФИО
     ui->le_fio->setMaxLength(45);
@@ -44,7 +54,8 @@ MainWindow::MainWindow(QWidget *parent) //Логика пользователь�
     QListWidgetItem* item = new QListWidgetItem("Год проведения\tДисциплина\t\tФИО");
     ui->lw_browser->addItem(item);
 
-    open_File();
+//    open_File();
+
 }
 
 void MainWindow::setupConnections() //Обработка сигналов (кликов)

@@ -9,6 +9,7 @@
 #include <QValidator>
 #include <QMap>
 #include "parameters.h"
+#include "pipe.h"
 
 using namespace std;
 
@@ -30,6 +31,7 @@ protected:
 private:
     Ui::MainWindow *ui;
     Workbase workbase;
+    Pipe pipe;
 //    QMap<int, Parameters> Db;
     QRegExpValidator valFio;
     int currentId = -1;
@@ -39,6 +41,7 @@ private:
 //    QString currentFile;
 
     void setupConnections();
+//    void ConnectPipe();
     void sortingList();
     QString disciplineToString(Parameters::Discipline discipline) const;
     void updateList(int index);
