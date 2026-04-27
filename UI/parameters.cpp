@@ -146,183 +146,183 @@ const QVector<BrowserItem> Workbase::records() const
 //    return true;
 //}
 
-bool Workbase::load()
-{
-    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_READ, 0, NULL,
-                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE) return false;
+//bool Workbase::load()
+//{
+//    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_READ, 0, NULL,
+//                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+//    if (file == INVALID_HANDLE_VALUE) return false;
 
-    DWORD fileSize = GetFileSize(file, NULL);
-    if (fileSize == INVALID_FILE_SIZE) { CloseHandle(file); return false; }
+//    DWORD fileSize = GetFileSize(file, NULL);
+//    if (fileSize == INVALID_FILE_SIZE) { CloseHandle(file); return false; }
 
-    char* buffer = new char[fileSize + 1];
-    DWORD bytesRead;
-    if (!ReadFile(file, buffer, fileSize, &bytesRead, NULL) || bytesRead != fileSize)
-    {
-        delete[] buffer;
-        CloseHandle(file);
-        return false;
-    }
-    buffer[fileSize] = '\0'; //+1
-    CloseHandle(file);
+//    char* buffer = new char[fileSize + 1];
+//    DWORD bytesRead;
+//    if (!ReadFile(file, buffer, fileSize, &bytesRead, NULL) || bytesRead != fileSize)
+//    {
+//        delete[] buffer;
+//        CloseHandle(file);
+//        return false;
+//    }
+//    buffer[fileSize] = '\0'; //+1
+//    CloseHandle(file);
 
-    clear();
+//    clear();
 
-    char* ptr = buffer;
-    char* end = buffer + fileSize;
+//    char* ptr = buffer;
+//    char* end = buffer + fileSize;
 
-    // Читаем m_nextId
-    while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
-    m_nextId = 0;
-    while (ptr < end && *ptr >= '0' && *ptr <= '9')
-        m_nextId = m_nextId * 10 + (*ptr++ - '0');
+//    // Читаем m_nextId
+//    while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+//    m_nextId = 0;
+//    while (ptr < end && *ptr >= '0' && *ptr <= '9')
+//        m_nextId = m_nextId * 10 + (*ptr++ - '0');
 
-    // Читаем записи
-    while (ptr < end)
-    {
-        Parameters record;
+//    // Читаем записи
+//    while (ptr < end)
+//    {
+//        Parameters record;
 
-        // Пропускаем нецифровые символы до id
-        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
-        if (ptr >= end) break;
+//        // Пропускаем нецифровые символы до id
+//        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+//        if (ptr >= end) break;
 
-        // Читаем id
-        record.id = 0;
-        while (ptr < end && *ptr >= '0' && *ptr <= '9')
-            record.id = record.id * 10 + (*ptr++ - '0');
+//        // Читаем id
+//        record.id = 0;
+//        while (ptr < end && *ptr >= '0' && *ptr <= '9')
+//            record.id = record.id * 10 + (*ptr++ - '0');
 
-        // Ищем открывающую кавычку
-        while (ptr < end && *ptr != '"') ptr++;
-        if (ptr >= end) break;
-        ptr++; // Пропускаем "
+//        // Ищем открывающую кавычку
+//        while (ptr < end && *ptr != '"') ptr++;
+//        if (ptr >= end) break;
+//        ptr++; // Пропускаем "
 
-        // Читаем ФИО
-        char fioBuf[256] = {0};
-        int i = 0;
-        while (ptr < end && *ptr != '"' && i < 255)
-            fioBuf[i++] = *ptr++;
-        record.FIO = QString::fromUtf8(fioBuf, i);
-        if (ptr < end && *ptr == '"') ptr++;
+//        // Читаем ФИО
+//        char fioBuf[256] = {0};
+//        int i = 0;
+//        while (ptr < end && *ptr != '"' && i < 255)
+//            fioBuf[i++] = *ptr++;
+//        record.FIO = QString::fromUtf8(fioBuf, i);
+//        if (ptr < end && *ptr == '"') ptr++;
 
-        // Пропускаем до даты
-        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+//        // Пропускаем до даты
+//        while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
 
-        // Читаем дату (10 символов: ГГГГ-ММ-ДД)
-        if (ptr + 10 <= end)
-        {
-            char dateBuf[11] = {0};
-            memcpy(dateBuf, ptr, 10);
-            record.DateBirth = QDate::fromString(QString::fromUtf8(dateBuf), "yyyy-MM-dd");
-            ptr += 10;
-        }
+//        // Читаем дату (10 символов: ГГГГ-ММ-ДД)
+//        if (ptr + 10 <= end)
+//        {
+//            char dateBuf[11] = {0};
+//            memcpy(dateBuf, ptr, 10);
+//            record.DateBirth = QDate::fromString(QString::fromUtf8(dateBuf), "yyyy-MM-dd");
+//            ptr += 10;
+//        }
 
-        // Читаем остальные 7 чисел
-        int vals[7];
-        for (int& val : vals)
-        {
-            while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
-            val = 0;
-            while (ptr < end && *ptr >= '0' && *ptr <= '9')
-                val = val * 10 + (*ptr++ - '0');
-        }
+//        // Читаем остальные 7 чисел
+//        int vals[7];
+//        for (int& val : vals)
+//        {
+//            while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
+//            val = 0;
+//            while (ptr < end && *ptr >= '0' && *ptr <= '9')
+//                val = val * 10 + (*ptr++ - '0');
+//        }
 
-        record.citizen = static_cast<Parameters::Citizen>(vals[0]);
-        record.type = static_cast<Parameters::TypeOlympiad>(vals[1]);
-        record.YearEvent = vals[2];
-        record.country = static_cast<Parameters::CountryEvent>(vals[3]);
-        record.discipline = static_cast<Parameters::Discipline>(vals[4]);
-        record.Place = vals[5];
-        record.Record = vals[6] != 0;
+//        record.citizen = static_cast<Parameters::Citizen>(vals[0]);
+//        record.type = static_cast<Parameters::TypeOlympiad>(vals[1]);
+//        record.YearEvent = vals[2];
+//        record.country = static_cast<Parameters::CountryEvent>(vals[3]);
+//        record.discipline = static_cast<Parameters::Discipline>(vals[4]);
+//        record.Place = vals[5];
+//        record.Record = vals[6] != 0;
 
-        Db.insert(record.id, record);
-    }
+//        Db.insert(record.id, record);
+//    }
 
-    delete[] buffer;
-    m_modified = false;
-    return true;
-}
+//    delete[] buffer;
+//    m_modified = false;
+//    return true;
+//}
 
-bool Workbase::save()
-{
-    // Создаем или открываем файл для записи
-    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_WRITE, 0, NULL,
-                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE)
-        return false;
+//bool Workbase::save()
+//{
+//    // Создаем или открываем файл для записи
+//    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_WRITE, 0, NULL,
+//                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+//    if (file == INVALID_HANDLE_VALUE)
+//        return false;
 
-    // Получаем все записи в отсортированном порядке
-    QList<Parameters> sortedList = Db.values();
-    std::sort(sortedList.begin(), sortedList.end(), [](const Parameters &a, const Parameters &b) {
-        return a < b;
-    });
+//    // Получаем все записи в отсортированном порядке
+//    QList<Parameters> sortedList = Db.values();
+//    std::sort(sortedList.begin(), sortedList.end(), [](const Parameters &a, const Parameters &b) {
+//        return a < b;
+//    });
 
-    // Формируем буфер для записи
-    QByteArray buffer;
+//    // Формируем буфер для записи
+//    QByteArray buffer;
 
-    // Добавляем m_nextId
-    buffer += QByteArray::number(m_nextId);
-    buffer += '\n';
+//    // Добавляем m_nextId
+//    buffer += QByteArray::number(m_nextId);
+//    buffer += '\n';
 
-    // Добавляем каждую запись
-    for (const Parameters &record : sortedList)
-    {
-        // ID
-        buffer += QByteArray::number(record.id);
-        buffer += ' ';
+//    // Добавляем каждую запись
+//    for (const Parameters &record : sortedList)
+//    {
+//        // ID
+//        buffer += QByteArray::number(record.id);
+//        buffer += ' ';
 
-        // ФИО в кавычках
-        buffer += '"';
-        buffer += record.FIO.toUtf8();
-        buffer += '"';
-        buffer += ' ';
+//        // ФИО в кавычках
+//        buffer += '"';
+//        buffer += record.FIO.toUtf8();
+//        buffer += '"';
+//        buffer += ' ';
 
-        // Дата
-        buffer += record.DateBirth.toString("yyyy-MM-dd").toUtf8();
-        buffer += ' ';
+//        // Дата
+//        buffer += record.DateBirth.toString("yyyy-MM-dd").toUtf8();
+//        buffer += ' ';
 
-        // citizen
-        buffer += QByteArray::number(static_cast<int>(record.citizen));
-        buffer += ' ';
+//        // citizen
+//        buffer += QByteArray::number(static_cast<int>(record.citizen));
+//        buffer += ' ';
 
-        // type
-        buffer += QByteArray::number(static_cast<int>(record.type));
-        buffer += ' ';
+//        // type
+//        buffer += QByteArray::number(static_cast<int>(record.type));
+//        buffer += ' ';
 
-        // YearEvent
-        buffer += QByteArray::number(record.YearEvent);
-        buffer += ' ';
+//        // YearEvent
+//        buffer += QByteArray::number(record.YearEvent);
+//        buffer += ' ';
 
-        // country
-        buffer += QByteArray::number(static_cast<int>(record.country));
-        buffer += ' ';
+//        // country
+//        buffer += QByteArray::number(static_cast<int>(record.country));
+//        buffer += ' ';
 
-        // discipline
-        buffer += QByteArray::number(static_cast<int>(record.discipline));
-        buffer += ' ';
+//        // discipline
+//        buffer += QByteArray::number(static_cast<int>(record.discipline));
+//        buffer += ' ';
 
-        // Place
-        buffer += QByteArray::number(record.Place);
-        buffer += ' ';
+//        // Place
+//        buffer += QByteArray::number(record.Place);
+//        buffer += ' ';
 
-        // Record
-        buffer += QByteArray::number(record.Record ? 1 : 0);
-        buffer += '\n';
-    }
+//        // Record
+//        buffer += QByteArray::number(record.Record ? 1 : 0);
+//        buffer += '\n';
+//    }
 
-    // Записываем буфер в файл через WinAPI
-    DWORD bytesWritten;
-    BOOL writeResult = WriteFile(file, buffer.constData(), buffer.size(), &bytesWritten, NULL);
+//    // Записываем буфер в файл через WinAPI
+//    DWORD bytesWritten;
+//    BOOL writeResult = WriteFile(file, buffer.constData(), buffer.size(), &bytesWritten, NULL);
 
-    CloseHandle(file);
+//    CloseHandle(file);
 
-    if (bytesWritten == buffer.size())
-    {
-        m_modified = false; // Сбрасываем флаг изменений после успешного сохранения
-        return true;
-    }
+//    if (bytesWritten == buffer.size())
+//    {
+//        m_modified = false; // Сбрасываем флаг изменений после успешного сохранения
+//        return true;
+//    }
 
-    return false;
-}
+//    return false;
+//}
 
 void Workbase::clear()
 {

@@ -54,8 +54,8 @@ public:
     bool update(const Parameters &record);
     bool record(unsigned int id, Parameters &record) const;
     const QVector<BrowserItem> records() const;
-    bool save();
-    bool load();
+//    bool save();
+//    bool load();
     void clear();
     bool isModified() const;
     QList<Parameters> values() const
