@@ -1,575 +1,502 @@
-#include <windows.h>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QMessageBox>
 #include <QDebug>
-#include <QTimer>
-#include <QFileDialog>
+#include <sstream>
 #include <QCloseEvent>
-#include "parameters.h"
 
-MainWindow::MainWindow(QWidget *parent) //Логика пользовательского интерфейса
+MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , valFio(QRegExp("^([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)$")) //пробел вначале нельзя поставить
-    , nextId(1)
+    , valFio(QRegExp("^([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)\\s([А-ЯЁA-Z]{1})([а-яёa-z]*)$"))
 {
     ui->setupUi(this);
+    ui->le_fio->setValidator(&valFio); //валидатор для ФИО
 
-    ui->lw_browser->setFocus();
+    // Настройка валидации и ограничений
+    ui->le_fio->setMaxLength(45);
+    ui->sb_year_event->setRange(1896, 2100);
+    ui->sb_year_event->setSingleStep(2);
+    ui->sb_place->setRange(1, 3);
+    ui->de_birth->setMinimumDate(QDate(1850, 1, 1));
+    ui->de_birth->setMaximumDate(QDate(1896, 1, 1).addYears(-14));
 
     setupConnections();
 
-    connect(&pipe, &Pipe::connected, this, [this]()
-    {
-//        pipe.ConnectPipe();
+    pipe.startServer();
+    QTimer::singleShot(1500, &pipe, &Pipe::connectPipe);
+    connect(&pipe, &Pipe::connected, this, &MainWindow::onConnected);
+    connect(&pipe, &Pipe::connectionFailed, this, [this](const QString& err) {
+        QMessageBox::warning(this, "Ошибка", err);
     });
-
-    pipe.StartServer();
-
-    QTimer::singleShot(2000, &pipe, &Pipe::ConnectPipe);
-
-    ui->le_fio->setValidator(&valFio); //валидатор для ФИО
-    ui->le_fio->setMaxLength(45);
-
-    int year = 1896;
-    QDate p(1850, 01, 01);
-    ui->de_birth->setMinimumDate(p);
-    ui->de_birth->setDate(p);
-    QDate t(1896, 01, 01);
-    ui->de_birth->setMaximumDate(t.addYears(-14)); //задаёт каждый раз
-
-    ui->sb_year_event->setRange(year, 2100);
-    ui->sb_year_event->setSingleStep(2);
-
-    ui->sb_place->setMinimum(1);
-    ui->sb_place->setMaximum(3);
-
-    ui->lw_citizen->setCurrentRow(-1);
-    ui->lw_olympiad->setCurrentRow(-1);
-    ui->lw_country->setCurrentRow(-1);
-    ui->lw_discipline->setCurrentRow(-1);
-
-    ui->cb_have_record->setEnabled(true);
-
-    QListWidgetItem* item = new QListWidgetItem("Год проведения\tДисциплина\t\tФИО");
-    ui->lw_browser->addItem(item);
-
-//    open_File();
-
 }
 
-void MainWindow::setupConnections() //Обработка сигналов (кликов)
+MainWindow::~MainWindow()
 {
-    connect(ui->le_fio, SIGNAL(textChanged(QString)), this, SLOT(sl_saveData()));
-    connect(ui->de_birth, SIGNAL(editingFinished()), this, SLOT(sl_saveData()));
-    connect(ui->lw_citizen, SIGNAL(currentRowChanged(int)), this, SLOT(sl_saveData()));
-    connect(ui->lw_olympiad, SIGNAL(currentRowChanged(int)), this, SLOT(sl_saveData()));
-    connect(ui->sb_year_event, SIGNAL(editingFinished()), this, SLOT(sl_saveData()));
-    connect(ui->lw_country, SIGNAL(currentRowChanged(int)), this, SLOT(sl_saveData()));
-    connect(ui->lw_discipline, SIGNAL(currentRowChanged(int)), this, SLOT(sl_saveData()));
-    connect(ui->sb_place, SIGNAL(editingFinished()), this, SLOT(sl_saveData()));
-    connect(ui->cb_have_record, SIGNAL(clicked()), this, SLOT(sl_saveData()));
-
-    connect(ui->sb_place, SIGNAL(valueChanged(int)), this, SLOT(sl_have_record(int)));
-    connect(ui->sb_year_event, SIGNAL(valueChanged(int)), this, SLOT(sl_Year_Event(int)));
-    connect(ui->lw_olympiad, SIGNAL(currentRowChanged(int)), this, SLOT(sl_choose_discipline(int)));
-
-    connect(ui->pb_fill, SIGNAL(clicked()), this, SLOT(sl_fill()));
-    connect(ui->lw_browser, SIGNAL(currentRowChanged(int)), this, SLOT(showCurrentRecord(int)));
-    connect(ui->pb_create, SIGNAL(clicked()), this, SLOT(sl_create()));
-    connect(ui->pb_remove, SIGNAL(clicked()), this, SLOT(sl_delete()));
-
-//    connect(ui->create_file, SIGNAL(triggered()), this, SLOT(create_File()));
-//    connect(ui->open_file, SIGNAL(triggered()), this, SLOT(open_File()));
-//    connect(ui->save_file, SIGNAL(triggered()), this, SLOT(save_File()));
-//    connect(ui->save_file_how, SIGNAL(triggered()), this, SLOT(save_File_how()));
+    delete ui;
 }
 
-void MainWindow::sl_Year_Event(int value) //Валидатор для дат
+void MainWindow::setupConnections()
 {
-    if (value % 2 != 0)
-        ui->sb_year_event->setValue(value - 1);
-    QDate t(value, 01, 01);
-    ui->de_birth->setMaximumDate(t.addYears(-14));
+    // Используем старый синтаксис SIGNAL/SLOT для совместимости
+    connect(ui->le_fio, SIGNAL(textChanged(QString)), this, SLOT(onSaveData()));
+    connect(ui->de_birth, SIGNAL(dateChanged(QDate)), this, SLOT(onSaveData()));
+    connect(ui->lw_citizen, SIGNAL(currentRowChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->lw_olympiad, SIGNAL(currentRowChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->sb_year_event, SIGNAL(valueChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->lw_country, SIGNAL(currentRowChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->lw_discipline, SIGNAL(currentRowChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->sb_place, SIGNAL(valueChanged(int)), this, SLOT(onSaveData()));
+    connect(ui->cb_have_record, SIGNAL(clicked(bool)), this, SLOT(onSaveData()));
+
+    connect(ui->sb_year_event, SIGNAL(valueChanged(int)), this, SLOT(onYearEventChanged(int)));
+    connect(ui->sb_place, SIGNAL(valueChanged(int)), this, SLOT(onPlaceChanged(int)));
+    connect(ui->lw_olympiad, SIGNAL(currentRowChanged(int)), this, SLOT(onOlympiadChanged(int)));
+
+    connect(ui->pb_create, SIGNAL(clicked()), this, SLOT(onCreate()));
+    connect(ui->pb_remove, SIGNAL(clicked()), this, SLOT(onDelete()));
+    connect(ui->pb_fill, SIGNAL(clicked()), this, SLOT(onFill()));
+    connect(ui->lw_browser, SIGNAL(currentRowChanged(int)), this, SLOT(onShowCurrentRecord(int)));
 }
 
-void MainWindow::sl_choose_discipline(int value) //Выбор дисциплины
+void MainWindow::onConnected()
 {
-    if (value == 1)
+    // Загружаем только список (без полных данных записей)
+    std::string response = pipe.sendCommand("GET_ALL");
+    if (response.substr(0, 6) != "ITEMS|")
     {
-        ui->lw_discipline->setRowHidden(0, true);
-        ui->lw_discipline->setRowHidden(1, true);
-        ui->lw_discipline->setRowHidden(2, true);
-        ui->lw_discipline->setRowHidden(3, true);
-        ui->lw_discipline->setRowHidden(4, true);
-        ui->lw_discipline->setRowHidden(5, 0);
-        ui->lw_discipline->setRowHidden(6, 0);
-        ui->lw_discipline->setRowHidden(7, 0);
-        ui->lw_discipline->setRowHidden(8, 0);
-    }
-    else if (value == 0)
-    {
-        ui->lw_discipline->setRowHidden(0, 0);
-        ui->lw_discipline->setRowHidden(1, 0);
-        ui->lw_discipline->setRowHidden(2, 0);
-        ui->lw_discipline->setRowHidden(3, 0);
-        ui->lw_discipline->setRowHidden(4, 0);
-        ui->lw_discipline->setRowHidden(5, true);
-        ui->lw_discipline->setRowHidden(6, true);
-        ui->lw_discipline->setRowHidden(7, true);
-        ui->lw_discipline->setRowHidden(8, true);
-    }
-}
-
-void MainWindow::sl_saveData() //Сохранение
-{
-    if (loadingInProgress) return; //Загрузка в процессе
-
-    int row = ui->lw_browser->currentRow();
-    if (row <= 0) return;
-
-    int index = ui->lw_browser->item(row)->data(Qt::UserRole).toInt();
-    Parameters s;
-    if (!workbase.record(index, s))
-    {
-        qDebug() << "Запись не найдена";
+        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить данные: " + QString::fromStdString(response));
         return;
     }
 
-    s.FIO = ui->le_fio->text();
-    s.DateBirth = ui->de_birth->date();
+    displayedRecords.clear();
 
-    if (ui->lw_citizen->currentRow() >= (0))
-        s.citizen = static_cast<Parameters::Citizen>(ui->lw_citizen->currentRow());
+    std::string data = response.substr(6);
 
-    if (ui->lw_olympiad->currentRow() >= (0))
-        s.type = static_cast<Parameters::TypeOlympiad>(ui->lw_olympiad->currentRow());
+    // Разбиваем всю строку по разделителю '|'
+    std::vector<std::string> allTokens;
+    std::stringstream ss(data);
+    std::string token;
+    while (std::getline(ss, token, '|'))
+        allTokens.push_back(token);
 
-    s.YearEvent = ui->sb_year_event->value();
+    if (allTokens.empty()) return;
 
-    if (ui->lw_country->currentRow() >= (0))
-        s.country = static_cast<Parameters::CountryEvent>(ui->lw_country->currentRow());
+    // Первый токен - это количество записей
+    int count = std::stoi(allTokens[0]);
 
-    if (ui->lw_discipline->currentRow() >= (0))
-        s.discipline = static_cast<Parameters::Discipline>(ui->lw_discipline->currentRow());
+    // Остальные токены - это данные записей (4 поля на запись)
+    int index = 1; // начинаем со следующего после count
+    for (int i = 0; i < count; i++)
+    {
+        // Проверяем, что у нас есть достаточно токенов для записи
+        if (index + 3 >= allTokens.size()) break;
 
-    s.Place = ui->sb_place->value();
-    s.Record = ui->cb_have_record->isChecked();
+        Parameters rec;
+        rec.id = std::stoi(allTokens[index++]);      // id
+        rec.YearEvent = std::stoi(allTokens[index++]); // YearEvent
+        rec.discipline = static_cast<Parameters::Discipline>(std::stoi(allTokens[index++])); // discipline
+        rec.FIO = QString::fromStdString(allTokens[index++]); // FIO
 
-    workbase.update(s);
+        displayedRecords.append(rec);
+    }
 
-//    updateSingleItem(index);
+    updateList();
 
-    updateList(index);
-    sortingList();
+    if (displayedRecords.size() > 0)
+        ui->lw_browser->setCurrentRow(0);  // 0 - заголовок
+
+    ui->pb_fill->setVisible(true);
 }
 
-//void MainWindow::updateSingleItem(int recordId) //Обновление текста для одной конкретной записи
-//{
-//    Parameters record;
-//    if (!workbase.record(recordId, record)) return;
-
-//    for (int i = 1; i < ui->lw_browser->count(); ++i) {
-//        if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == recordId) {
-//            ui->lw_browser->item(i)->setText(
-//                QString("%1\t\t%2\t\t%3")
-//                    .arg(record.YearEvent)
-//                    .arg(disciplineToString(record.discipline))
-//                    .arg(record.FIO));
-//            return;
-//        }
-//    }
-//}
-
-void MainWindow::updateList(int index) //Обновление текста одной конкретной записи
+void MainWindow::updateList()
 {
-    Parameters up;
-    if (!workbase.record(index, up)) return;
+    qDebug() << "updateList called, records:" << displayedRecords.size();
 
-    QListWidgetItem* item = nullptr;
+    ui->lw_browser->clear();
+    ui->lw_browser->addItem("Год проведения\tДисциплина\t\tФИО");
 
-    const int itemCount = ui->lw_browser->count();
-    for (int i = 0; i < itemCount && !item; ++i)
+    for (const Parameters& rec : displayedRecords)
     {
-        QListWidgetItem* itemz = ui->lw_browser->item(i);
-        if (itemz->data(Qt::UserRole).toInt() == index)
+        QString text = QString("%1\t\t%2\t\t%3")
+            .arg(rec.YearEvent)
+            .arg(disciplineToString(static_cast<int>(rec.discipline)))
+            .arg(rec.FIO);
+        QListWidgetItem* item = new QListWidgetItem(text);
+        item->setData(Qt::UserRole, rec.id);
+        ui->lw_browser->addItem(item);
+    }
+
+    qDebug() << "List widget count:" << ui->lw_browser->count();
+}
+
+void MainWindow::onShowCurrentRecord(int row)
+{
+    if (row <= 0 || row - 1 >= displayedRecords.size())
+    {
+        if (row == 0)
         {
-            item = itemz;
+            // Очищаем поля при выборе заголовка
+            loadingInProgress = true;
+            ui->le_fio->clear();
+            ui->de_birth->setDate(QDate(1850, 1, 1));
+            ui->lw_citizen->setCurrentRow(-1);
+            ui->lw_olympiad->setCurrentRow(-1);
+            ui->sb_year_event->setValue(1896);
+            ui->lw_country->setCurrentRow(-1);
+            ui->lw_discipline->setCurrentRow(-1);
+            ui->sb_place->setValue(1);
+            ui->cb_have_record->setChecked(false);
+            currentId = -1;
+            loadingInProgress = false;
+        }
+        return;
+    }
+
+    loadingInProgress = true;
+
+    const Parameters& rec = displayedRecords[row - 1];
+    currentId = rec.id;
+
+    // Загружаем полные данные с сервера
+    std::string cmd = "GET:" + std::to_string(rec.id);
+    std::string response = pipe.sendCommand(cmd);
+
+    if (response.substr(0, 7) == "RECORD|")
+    {
+        std::string data = response.substr(7);
+        std::vector<std::string> tokens;
+        std::stringstream ss(data);
+        std::string token;
+        while (std::getline(ss, token, '|'))
+            tokens.push_back(token);
+
+        if (tokens.size() >= 12)
+        {
+            ui->le_fio->setText(QString::fromStdString(tokens[1]));
+
+            int year = std::stoi(tokens[2]);
+            int month = std::stoi(tokens[3]);
+            int day = std::stoi(tokens[4]);
+            ui->de_birth->setDate(QDate(year, month, day));
+
+            ui->lw_citizen->setCurrentRow(std::stoi(tokens[5]));
+            ui->lw_olympiad->setCurrentRow(std::stoi(tokens[6]));
+            ui->sb_year_event->setValue(std::stoi(tokens[7]));
+            ui->lw_country->setCurrentRow(std::stoi(tokens[8]));
+            ui->lw_discipline->setCurrentRow(std::stoi(tokens[9]));
+            ui->sb_place->setValue(std::stoi(tokens[10]));
+            ui->cb_have_record->setChecked(std::stoi(tokens[11]) != 0);
+        }
+    }
+    else
+    {
+        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить запись");
+    }
+
+    loadingInProgress = false;
+}
+
+void MainWindow::onSaveData()
+{
+    if (loadingInProgress) return;
+    if (currentId == -1) return;
+
+    Parameters rec;
+    rec.id = currentId;
+    rec.FIO = ui->le_fio->text();
+    rec.DateBirth = ui->de_birth->date();
+    rec.citizen = static_cast<Parameters::Citizen>(ui->lw_citizen->currentRow());
+    rec.type = static_cast<Parameters::TypeOlympiad>(ui->lw_olympiad->currentRow());
+    rec.YearEvent = ui->sb_year_event->value();
+    rec.country = static_cast<Parameters::CountryEvent>(ui->lw_country->currentRow());
+    rec.discipline = static_cast<Parameters::Discipline>(ui->lw_discipline->currentRow());
+    rec.Place = ui->sb_place->value();
+    rec.Record = ui->cb_have_record->isChecked();
+
+    sendRecordToServer(rec, true);
+
+    // Обновляем отображение
+    for (int i = 0; i < displayedRecords.size(); i++)
+    {
+        if (displayedRecords[i].id == currentId)
+        {
+            displayedRecords[i].YearEvent = rec.YearEvent;
+            displayedRecords[i].discipline = rec.discipline;
+            displayedRecords[i].FIO = rec.FIO;
+            break;
+        }
+    }
+    updateList();
+
+    // Восстанавливаем выделение
+    for (int i = 1; i < ui->lw_browser->count(); i++)
+    {
+        if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == currentId)
+        {
+            ui->lw_browser->setCurrentRow(i);
+            break;
+        }
+    }
+}
+
+void MainWindow::sendRecordToServer(const Parameters& rec, bool isUpdate)
+{
+    std::stringstream cmd;
+
+    if (isUpdate)
+    {
+        cmd << "UPDATE:" << rec.id << "|"
+            << rec.FIO.toStdString() << "|"
+            << rec.DateBirth.year() << "|"
+            << rec.DateBirth.month() << "|"
+            << rec.DateBirth.day() << "|"
+            << static_cast<int>(rec.citizen) << "|"
+            << static_cast<int>(rec.type) << "|"
+            << rec.YearEvent << "|"
+            << static_cast<int>(rec.country) << "|"
+            << static_cast<int>(rec.discipline) << "|"
+            << rec.Place << "|"
+            << (rec.Record ? 1 : 0);
+    }
+    else
+    {
+        cmd << "ADD:" << rec.FIO.toStdString() << "|"
+            << rec.DateBirth.year() << "|"
+            << rec.DateBirth.month() << "|"
+            << rec.DateBirth.day() << "|"
+            << static_cast<int>(rec.citizen) << "|"
+            << static_cast<int>(rec.type) << "|"
+            << rec.YearEvent << "|"
+            << static_cast<int>(rec.country) << "|"
+            << static_cast<int>(rec.discipline) << "|"
+            << rec.Place << "|"
+            << (rec.Record ? 1 : 0);
+    }
+
+    pipe.sendCommand(cmd.str());
+    dataModified = true;
+}
+
+void MainWindow::onCreate()
+{
+    std::string response = pipe.sendCommand(
+        "ADD:|1850|1|1|0|0|1896|0|0|1|0"
+    );
+
+    if (response.substr(0, 6) == "ADDED|")
+    {
+        int newId = std::stoi(response.substr(6));
+
+        Parameters newRec;
+        newRec.id = newId;
+        newRec.FIO = "";
+        newRec.YearEvent = 1896;
+        newRec.discipline = Parameters::a;
+        displayedRecords.append(newRec);
+        updateList();
+
+        // Находим и выделяем новую запись
+        for (int i = 1; i < ui->lw_browser->count(); i++)
+        {
+            if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == newId)
+            {
+                ui->lw_browser->setCurrentRow(i);
+                break;
+            }
         }
     }
 
-    if (item)
-    {
-        item->setText(QString("%1\t\t%2\t\t%3")
-                .arg(up.YearEvent)
-                .arg(disciplineToString(up.discipline))
-                .arg(up.FIO));
-    }
+    ui->pb_fill->setVisible(false);
 }
 
-void MainWindow::sl_delete() //кнопка удаления
+void MainWindow::onDelete()
 {
     int row = ui->lw_browser->currentRow();
     if (row <= 0) return;
 
-    int index = ui->lw_browser->item(row)->data(Qt::UserRole).toInt();
-    workbase.remove(index);
+    int id = ui->lw_browser->item(row)->data(Qt::UserRole).toInt();
 
-    delete ui->lw_browser->takeItem(row);
+    pipe.sendCommand("DELETE:" + std::to_string(id));
 
-    if (workbase.count() == 0)
+    for (int i = 0; i < displayedRecords.size(); i++)
+    {
+        if (displayedRecords[i].id == id)
+        {
+            displayedRecords.remove(i);
+            break;
+        }
+    }
+
+    updateList();
+    dataModified = true;
+
+    if (displayedRecords.size() > 0)
+        ui->lw_browser->setCurrentRow(1);
+    else
         currentId = -1;
-    else
-    {
-        if (row >= ui->lw_browser->count())
-            row = ui->lw_browser->count() - 1;
-        if (row > 0)
-        {
-            currentId = ui->lw_browser->item(row)->data(Qt::UserRole).toInt();
-            ui->lw_browser->setCurrentRow(row);
-        }
-        else if (ui->lw_browser->count() > 1)
-        {
-            currentId = ui->lw_browser->item(1)->data(Qt::UserRole).toInt();
-            ui->lw_browser->setCurrentRow(1);
-        }
-        else
-            currentId = -1;
-    }
 }
 
-void MainWindow::showCurrentRecord(int current) //Отображение данных в правой части окна
+void MainWindow::onFill()
 {
-    if (current <= 0) return;
-
-    QListWidgetItem* item = ui->lw_browser->item(current);
-    if (!item) return;
-
-    int index = item->data(Qt::UserRole).toInt();
-    Parameters rec;
-    if (workbase.record(index, rec))
-    {
-        currentId = index;
-
-        loadingInProgress = true;
-
-        ui->le_fio->setText(rec.FIO);
-        ui->de_birth->setDate(rec.DateBirth);
-        ui->lw_citizen->setCurrentRow(rec.citizen);
-        ui->lw_olympiad->setCurrentRow(rec.type);
-        ui->sb_year_event->setValue(rec.YearEvent);
-        ui->lw_country->setCurrentRow(rec.country);
-        ui->lw_discipline->setCurrentRow(rec.discipline);
-        ui->sb_place->setValue(rec.Place);
-        ui->cb_have_record->setChecked(rec.Record);
-
-        loadingInProgress = false;
-    }
-}
-
-void MainWindow::sl_have_record(int value) //Слот для отработки кнопки "Установить рекорд"
-{
-    if (value == 1)
-    {
-        ui->cb_have_record->setEnabled(true);
-    }
-    else
-    {
-        ui->cb_have_record->setChecked(false);
-        ui->cb_have_record->setEnabled(false);
-    }
-}
-
-void MainWindow::sl_fill() //Показывает в браузере по нажатию кнопки "Заполнить"
-{
-    QStringList name =
-    {
+    QStringList names = {
         "Путин Владимир Владимирович", "Мусагалиев Азамат Тахирович", "Гейтс Уильям Генри", "Геннадий", "Зубенко Михаил Петрович",
         "Чоу Юнь Фат", "Чехов Капибар Капибарыч", "Сын Васи Березуцкого", "Чемпион", "Зинаида Петровна"
     };
 
     for (int i = 0; i < 10; i++)
     {
-        Parameters ten;
-        ten.id = generateId();
-        ten.FIO = QString("%1").arg(name[i]);
-        ten.DateBirth = QDate(1850 + i, (i % 12) + 1, 1);
-        ten.citizen = static_cast<Parameters::Citizen>(i % 5);
-        ten.YearEvent = 1896 + (i * 2);
-        ten.country = static_cast<Parameters::CountryEvent>(i % 4);
-        ten.discipline = static_cast<Parameters::Discipline>(i % 9);
-        if (ten.discipline < 5)
-            ten.type = static_cast<Parameters::TypeOlympiad>(0);
-        else
-            ten.type = static_cast<Parameters::TypeOlympiad>(1);
-        if (i > 0 && i < 4)
-            ten.Place = i;
-        else if (i == 0)
-            ten.Place = 1;
-        else
-            ten.Place = 3;
-        if (ten.Place == 1)
-            ten.Record = 1;
-        else
-            ten.Record = 0;
-        workbase.append(ten);
-    }
-    sortingList();
+        Parameters rec;
+        rec.FIO = names[i];
+        rec.DateBirth = QDate(1850 + i, (i % 12) + 1, 1);
+        rec.citizen = static_cast<Parameters::Citizen>(i % 5);
+        rec.YearEvent = 1896 + i * 2;
+        rec.country = static_cast<Parameters::CountryEvent>(i % 4);
+        rec.discipline = static_cast<Parameters::Discipline>(i % 9);
+        rec.type = (static_cast<int>(rec.discipline) < 5) ? Parameters::summer : Parameters::winter;
+        rec.Place = (i == 0) ? 1 : 3;
+        rec.Record = (rec.Place == 1);
 
-    ui->pb_fill->setVisible(false); //кнопка исчезает
+        sendRecordToServer(rec, false);
+    }
+
+    // Пауза для обработки сервером
+    Sleep(500);
+
+    loadAllRecords();
+    ui->pb_fill->setVisible(false);
 }
 
-void MainWindow::sortingList() //Сортировка
+void MainWindow::loadAllRecords()
 {
-    QSignalBlocker blocker(ui->lw_browser);
-
-    int currentRow = ui->lw_browser->currentRow();
-    int saveId = -1;
-    if (currentRow > 0)
-        saveId = ui->lw_browser->item(currentRow)->data(Qt::UserRole).toInt();
-
-    while (ui->lw_browser->count() > 1) //
-        delete ui->lw_browser->takeItem(1);
-
-    QVector<BrowserItem> items = workbase.records();
-
-    for (const BrowserItem &item : items)
+    std::string response = pipe.sendCommand("GET_ALL");
+    if (response.substr(0, 6) != "ITEMS|")
     {
-        Parameters ten;
-        if (workbase.record(item.id, ten))
-        {
-            QString write = QString("%1\t\t%2\t\t%3")
-                    .arg(ten.YearEvent)
-                    .arg(disciplineToString(ten.discipline))
-                    .arg(ten.FIO);
-
-            QListWidgetItem* wr = new QListWidgetItem(write);
-            wr->setData(Qt::UserRole, ten.id);
-            ui->lw_browser->addItem(wr);
-        }
-    }
-
-    if (saveId != -1)
-    {
-           for (int i = 1; i < ui->lw_browser->count(); ++i)
-           {
-               if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == saveId)
-               {
-                   ui->lw_browser->setCurrentRow(i);
-//                   currentId = saveId;
-                   return;
-               }
-           }
-    }
-    else if (ui->lw_browser->count() > 1) {
-        ui->lw_browser->setCurrentRow(1);
-    }
-}
-
-QString MainWindow::disciplineToString(Parameters::Discipline discipline) const
-{
-    switch (discipline)
-    {
-        case Parameters::a: return "бег на 100 м";
-        case Parameters::b: return "бег с барьерами на 110 м";
-        case Parameters::c: return "прыжки в высоту";
-        case Parameters::d: return "прыжки с шестом";
-        case Parameters::e: return "метание диска";
-        case Parameters::f: return "шорт-трек 1 км";
-        case Parameters::g: return "бег на коньках 5000 м";
-        case Parameters::i: return "бег на лыжах 40 км";
-        case Parameters::h: return "биатлон, масс-старт, 40 км";
-    }
-    return "";
-}
-
-void MainWindow::sl_create()
-{
-    if (ui->lw_browser->count() == 0)
-    {
-        ui->lw_browser->addItem("Год проведения\tДисциплина\t\tФИО"); //добавить строку
-    }
-    Parameters n;
-    n.id = generateId();
-    n.FIO = "";
-    n.YearEvent = 1896;
-    n.discipline = static_cast<Parameters::Discipline>(0);
-    if (n.discipline < 5)
-        n.type = static_cast<Parameters::TypeOlympiad>(0);
-    else
-        n.type = static_cast<Parameters::TypeOlympiad>(1);
-    n.DateBirth = QDate(1850, 1, 1);
-    n.citizen = static_cast<Parameters::Citizen>(0);
-    n.country = static_cast<Parameters::CountryEvent>(0);
-    n.Place = 2;
-    n.Record = false;
-
-    workbase.append(n);
-    currentId = n.id;
-    sortingList();
-
-    ui->pb_fill->setVisible(false); //кнопка исчезает
-}
-
-int MainWindow::generateId()
-{
-    return nextId++;
-}
-
-void MainWindow::save_File()
-{
-//    if (currentFile.isEmpty()) {
-//        save_File_how();
-//        return;
-//    }
-
-    if (!workbase.save()) {
-        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить файл");
-    }
-}
-
-//void MainWindow::save_File_how() {
-//    QString fileName = QFileDialog::getSaveFileName(this,
-//        "Сохранить файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
-
-//    if (fileName.isEmpty()) return;
-
-//    currentFile = fileName;
-//    save_File();
-//}
-
-void MainWindow::open_File() //Открыть файл
-{
-//    if (workbase.isModified()) {
-//        QMessageBox::StandardButton reply;
-//        reply = QMessageBox::question(this, "Несохраненные изменения",
-//             "У вас есть несохраненные изменения. Хотите сохранить перед открытием другого файла?",
-//             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-
-//        if (reply == QMessageBox::Yes) {
-//            save_File(); // Сохраняем текущий файл
-//        }
-//        else if (reply == QMessageBox::Cancel) {
-//            return; // Отменяем создание нового файла
-//        }
-//    }
-
-//    QString fileName = QFileDialog::getOpenFileName(this,
-//        "Открыть файл", "", "Текстовые файлы (*.txt);;Все файлы (*)");
-
-
-//    if (fileName.isEmpty()) return;
-
-//    currentFile = fileName;
-
-//    workbase.clear();
-//    while (ui->lw_browser->count() > 1) {
-//        delete ui->lw_browser->takeItem(1);
-//    }
-
-//    loadingInProgress = true;
-
-
-
-    if (!workbase.load()) //Загрузка данных в базу
-    {
-        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить файл");
-        loadingInProgress = false;
+        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить данные");
         return;
     }
 
-    nextId = 1;
-    QVector<BrowserItem> items = workbase.records();
-    for (const BrowserItem &item : items) {
-        if (item.id >= nextId) {
-            nextId = item.id + 1;
+    displayedRecords.clear();
+
+    std::string data = response.substr(6);
+
+    // Разбиваем всю строку по разделителю '|'
+    std::vector<std::string> allTokens;
+    std::stringstream ss(data);
+    std::string token;
+    while (std::getline(ss, token, '|'))
+        allTokens.push_back(token);
+
+    if (allTokens.empty()) return;
+
+    // Первый токен - это количество записей
+    int count = std::stoi(allTokens[0]);
+
+    // Остальные токены - это данные записей (4 поля на запись)
+    int index = 1;
+    for (int i = 0; i < count; i++)
+    {
+        if (index + 3 >= allTokens.size()) break;
+
+        Parameters rec;
+        rec.id = std::stoi(allTokens[index++]);
+        rec.YearEvent = std::stoi(allTokens[index++]);
+        rec.discipline = static_cast<Parameters::Discipline>(std::stoi(allTokens[index++]));
+        rec.FIO = QString::fromStdString(allTokens[index++]);
+
+        displayedRecords.append(rec);
+    }
+
+    updateList();
+}
+
+void MainWindow::onYearEventChanged(int value)
+{
+    if (value % 2 != 0)
+        ui->sb_year_event->setValue(value - 1);
+
+    QDate maxDate(value, 1, 1);
+    ui->de_birth->setMaximumDate(maxDate.addYears(-14));
+}
+
+void MainWindow::onPlaceChanged(int value)
+{
+    ui->cb_have_record->setEnabled(value == 1);
+    if (value != 1)
+        ui->cb_have_record->setChecked(false);
+}
+
+void MainWindow::onOlympiadChanged(int row)
+{
+    bool isWinter = (row == 1);
+    for (int i = 0; i < ui->lw_discipline->count(); i++)
+    {
+        bool hide = (isWinter && i < 5) || (!isWinter && i >= 5);
+        ui->lw_discipline->setRowHidden(i, hide);
+    }
+}
+
+void MainWindow::saveFile()
+{
+    std::string response = pipe.sendCommand("SAVE");
+    if (response.substr(0, 2) == "OK")
+    {
+        dataModified = false;
+        QMessageBox::information(this, "Сохранение", "Данные сохранены");
+    }
+    else
+    {
+        QMessageBox::warning(this, "Ошибка", "Не удалось сохранить данные");
+    }
+}
+
+void MainWindow::loadFile()
+{
+    std::string response = pipe.sendCommand("LOAD");
+    if (response.substr(0, 2) == "OK")
+    {
+        loadAllRecords();
+        QMessageBox::information(this, "Загрузка", "Данные загружены");
+    }
+    else
+    {
+        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить данные");
+    }
+}
+
+QString MainWindow::disciplineToString(int discipline) const
+{
+    switch (discipline)
+    {
+        case 0: return "бег на 100 м";
+        case 1: return "бег с барьерами на 110 м";
+        case 2: return "прыжки в высоту";
+        case 3: return "прыжки с шестом";
+        case 4: return "метание диска";
+        case 5: return "шорт-трек 1 км";
+        case 6: return "бег на коньках 5000 м";
+        case 7: return "бег на лыжах 40 км";
+        case 8: return "биатлон, масс-старт, 40 км";
+        default: return "";
+    }
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (dataModified)
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this, "Сохранение",
+            "Данные не сохранены. Сохранить перед выходом?",
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+
+        if (reply == QMessageBox::Yes)
+            saveFile();
+        else if (reply == QMessageBox::Cancel)
+        {
+            event->ignore();
+            return;
         }
     }
-
-    sortingList();
-
-    loadingInProgress = false;
-
-    if (workbase.count() > 0) {
-        currentId = workbase.records().first().id;
-    }
-    else
-        currentId = -1;
-}
-
-//void MainWindow::create_File()
-//{
-//    if (workbase.isModified()) {
-//        QMessageBox::StandardButton reply;
-//        reply = QMessageBox::question(this, "Несохраненные изменения",
-//             "У вас есть несохраненные изменения. Хотите сохранить перед созданием нового файла?",
-//             QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-
-//        if (reply == QMessageBox::Yes) {
-//            save_File(); // Сохраняем текущий файл
-//        }
-//        else if (reply == QMessageBox::Cancel) {
-//            return; // Отменяем создание нового файла
-//        }
-//    }
-
-//    workbase.clear();
-//    nextId = 1;
-//    currentFile.clear();
-
-//    while (ui->lw_browser->count() > 1) {
-//        delete ui->lw_browser->takeItem(1);
-//    }
-
-//    ui->le_fio->clear();
-//    ui->de_birth->setDate(QDate(1850, 1, 1));
-//    ui->lw_citizen->setCurrentRow(-1);
-//    ui->lw_olympiad->setCurrentRow(-1);
-//    ui->sb_year_event->setValue(1896);
-//    ui->lw_country->setCurrentRow(-1);
-//    ui->lw_discipline->setCurrentRow(-1);
-//    ui->sb_place->setValue(1);
-//    ui->cb_have_record->setChecked(false);
-//}
-
-//void MainWindow::closeEvent(QCloseEvent *event)
-//{
-//    if (workbase.isModified())
-//    {
-//        QMessageBox::StandardButton reply;
-//        reply = QMessageBox::question(this, "Несохраненные изменения",
-//                                     "У вас есть несохраненные изменения. Хотите сохранить перед выходом?",
-//                                     QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-
-//        if (reply == QMessageBox::Yes) {
-//            save_File();
-//            event->accept(); // Закрываем программу
-//        }
-//        else if (reply == QMessageBox::No) {
-//            event->accept(); // Закрываем без сохранения
-//        }
-//        else {
-//            event->ignore(); // Отменяем закрытие
-//        }
-//    }
-//    else
-//    {
-//        event->accept(); // Закрываем если нет изменений
-//    }
-//}
-
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    if (workbase.isModified())
-    {
-        save_File();
-        event->accept(); // Закрываем программу
-    }
-    else
-        event->accept();
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
+    event->accept();
 }

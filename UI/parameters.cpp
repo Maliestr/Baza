@@ -95,7 +95,7 @@ const QVector<BrowserItem> Workbase::records() const
         BrowserItem item;
         item.id = record.id;
         item.YearEvent = record.YearEvent;
-        item.discipline = disciplineToString(record.discipline);
+        item.discipline = static_cast<int>(record.discipline);  // Сохраняем как int
         item.fio = record.FIO;
         result.append(item);
     }

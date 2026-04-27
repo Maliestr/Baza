@@ -1,17 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <windows.h>
 #include <QMainWindow>
-#include <QLineEdit>
+#include <QListWidgetItem>
+#include <QVector>
 #include <QDate>
-#include <QMessageBox>
-#include <QValidator>
-#include <QMap>
-#include "parameters.h"
+#include <string>
+#include <vector>
 #include "pipe.h"
-
-using namespace std;
+#include "parameters.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -28,38 +25,33 @@ public:
 protected:
     void closeEvent(QCloseEvent *event) override;
 
+private slots:
+    void onConnected();
+    void onSaveData();
+    void onShowCurrentRecord(int row);
+    void onCreate();
+    void onDelete();
+    void onFill();
+    void onYearEventChanged(int value);
+    void onPlaceChanged(int value);
+    void onOlympiadChanged(int row);
+    void saveFile();
+    void loadFile();
+
 private:
     Ui::MainWindow *ui;
-    Workbase workbase;
     Pipe pipe;
-//    QMap<int, Parameters> Db;
     QRegExpValidator valFio;
+    QVector<Parameters> displayedRecords;  // Изменено с RecordData на Parameters
     int currentId = -1;
-    int nextId = 1;
-
     bool loadingInProgress = false;
-//    QString currentFile;
+    bool dataModified = false;
 
     void setupConnections();
-//    void ConnectPipe();
-    void sortingList();
-    QString disciplineToString(Parameters::Discipline discipline) const;
-    void updateList(int index);
-    int generateId();
-    void updateSingleItem(int recordId);
-
-private slots:
-    void sl_Year_Event(int value);
-    void sl_have_record(int value);
-    void sl_choose_discipline(int value);
-    void sl_saveData();
-    void showCurrentRecord(int value);
-    void sl_fill();
-    void sl_create();
-    void sl_delete();
-    void save_File();
-//    void save_File_how();
-    void open_File();
-//    void create_File();
+    void loadAllRecords();
+    void updateList();
+    void sendRecordToServer(const Parameters& rec, bool isUpdate);
+    QString disciplineToString(int discipline) const;
 };
-#endif // MAINWINDOW_H
+
+#endif

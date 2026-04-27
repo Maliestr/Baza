@@ -40,7 +40,7 @@ struct BrowserItem
 {
     int id;
     int YearEvent;
-    QString discipline;
+    int discipline;
     QString fio;
 };
 

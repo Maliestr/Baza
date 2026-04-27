@@ -1,10 +1,9 @@
-#include <windows.h>
-#include <algorithm>
-#include <vector>
-#include <iostream>
 #include "parameters.h"
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
-// Конструктор Parameters
 Parameters::Parameters()
     : FIO(""),
     DateBirth{ 1850, 1, 1 },
@@ -15,44 +14,30 @@ Parameters::Parameters()
     discipline(a),
     Place(1),
     Record(false)
-{}
+{
+}
 
-// Оператор сравнения (нужен для сортировки)
 bool Parameters::operator<(const Parameters& other) const
 {
-    if (FIO != other.FIO)
-        return FIO < other.FIO;
-
-    // Сравнение дат
+    if (FIO != other.FIO) return FIO < other.FIO;
     for (int i = 0; i < 3; ++i) {
         if (DateBirth[i] != other.DateBirth[i])
             return DateBirth[i] < other.DateBirth[i];
     }
-
-    if (Place != other.Place)
-        return Place < other.Place;
-
-    if (YearEvent != other.YearEvent)
-        return YearEvent < other.YearEvent;
-
-    if (type != other.type)
-        return type < other.type;
-
+    if (Place != other.Place) return Place < other.Place;
+    if (YearEvent != other.YearEvent) return YearEvent < other.YearEvent;
+    if (type != other.type) return type < other.type;
     return discipline < other.discipline;
 }
 
-// Конструктор Workbase
 Workbase::Workbase() : m_nextId(1), m_modified(false) {}
 
-int Workbase::count() const
-{
-    return Db.size();
-}
+int Workbase::count() const { return Db.size(); }
 
 int Workbase::append(Parameters& record)
 {
     record.id = m_nextId++;
-    Db[record.id] = record;  // std::map способ
+    Db[record.id] = record;
     m_modified = true;
     return record.id;
 }
@@ -86,7 +71,7 @@ bool Workbase::record(unsigned int id, Parameters& result) const
 
 bool Workbase::load()
 {
-    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_READ, 0, NULL,
+    HANDLE file = CreateFileA("../UI/okak.txt", GENERIC_READ, 0, NULL,
         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) return false;
 
@@ -120,48 +105,39 @@ bool Workbase::load()
     {
         Parameters record;
 
-        // Пропускаем нецифровые символы до id
         while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
         if (ptr >= end) break;
 
-        // Читаем id
         record.id = 0;
         while (ptr < end && *ptr >= '0' && *ptr <= '9')
             record.id = record.id * 10 + (*ptr++ - '0');
 
-        // Ищем открывающую кавычку
         while (ptr < end && *ptr != '"') ptr++;
         if (ptr >= end) break;
         ptr++;
 
-        // Читаем ФИО
         char fioBuf[256] = { 0 };
         int i = 0;
         while (ptr < end && *ptr != '"' && i < 255)
             fioBuf[i++] = *ptr++;
-        record.FIO = std::string(fioBuf, i);  // std::string вместо QString
+        record.FIO = std::string(fioBuf, i);
         if (ptr < end && *ptr == '"') ptr++;
 
-        // Пропускаем до даты
         while (ptr < end && (*ptr < '0' || *ptr > '9')) ptr++;
 
-        // Читаем дату (10 символов: ГГГГ-ММ-ДД)
         if (ptr + 10 <= end)
         {
-            // Парсим дату вручную
             int year = 0, month = 0, day = 0;
             for (int j = 0; j < 4; j++) year = year * 10 + (*ptr++ - '0');
-            ptr++; // пропускаем '-'
+            ptr++;
             for (int j = 0; j < 2; j++) month = month * 10 + (*ptr++ - '0');
-            ptr++; // пропускаем '-'
+            ptr++;
             for (int j = 0; j < 2; j++) day = day * 10 + (*ptr++ - '0');
-
             record.DateBirth[0] = year;
             record.DateBirth[1] = month;
             record.DateBirth[2] = day;
         }
 
-        // Читаем остальные 7 чисел
         int vals[7];
         for (int& val : vals)
         {
@@ -179,83 +155,51 @@ bool Workbase::load()
         record.Place = vals[5];
         record.Record = vals[6] != 0;
 
-        Db[record.id] = record;  // std::map вставка
+        Db[record.id] = record;
     }
 
-    //delete[] buffer;
+    delete[] buffer;
     m_modified = false;
     return true;
 }
 
 bool Workbase::save()
 {
-    HANDLE file = CreateFile(L"../UI/okak.txt", GENERIC_WRITE, 0, NULL,
+    HANDLE file = CreateFileA("../UI/okak.txt", GENERIC_WRITE, 0, NULL,
         CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE)
-        return false;
+    if (file == INVALID_HANDLE_VALUE) return false;
 
-    // Собираем записи в вектор для сортировки
     std::vector<Parameters> sortedList;
-    for (const auto& pair : Db) {
-        sortedList.push_back(pair.second);
-    }
+    for (const auto& pair : Db) sortedList.push_back(pair.second);
     std::sort(sortedList.begin(), sortedList.end());
 
-    // Формируем буфер (используем std::string вместо QByteArray)
     std::string buffer;
+    buffer += std::to_string(m_nextId) + "\n";
 
-    // Добавляем m_nextId
-    buffer += std::to_string(m_nextId);
-    buffer += '\n';
-
-    // Добавляем каждую запись
     for (const Parameters& record : sortedList)
     {
-        // ID
-        buffer += std::to_string(record.id);
-        buffer += ' ';
-
-        // ФИО в кавычках
-        buffer += '"';
-        buffer += record.FIO;
-        buffer += '"';
-        buffer += ' ';
-
-        // Дата
+        buffer += std::to_string(record.id) + " \"";
+        buffer += record.FIO + "\" ";
         buffer += std::to_string(record.DateBirth[0]) + "-" +
-            std::to_string(record.DateBirth[1]) + "-" +
-            std::to_string(record.DateBirth[2]);
-        buffer += ' ';
-
-        // Все поля
-        buffer += std::to_string(static_cast<int>(record.citizen));
-        buffer += ' ';
-        buffer += std::to_string(static_cast<int>(record.type));
-        buffer += ' ';
-        buffer += std::to_string(record.YearEvent);
-        buffer += ' ';
-        buffer += std::to_string(static_cast<int>(record.country));
-        buffer += ' ';
-        buffer += std::to_string(static_cast<int>(record.discipline));
-        buffer += ' ';
-        buffer += std::to_string(record.Place);
-        buffer += ' ';
-        buffer += std::to_string(record.Record ? 1 : 0);
-        buffer += '\n';
+            (record.DateBirth[1] < 10 ? "0" : "") + std::to_string(record.DateBirth[1]) + "-" +
+            (record.DateBirth[2] < 10 ? "0" : "") + std::to_string(record.DateBirth[2]) + " ";
+        buffer += std::to_string(static_cast<int>(record.citizen)) + " ";
+        buffer += std::to_string(static_cast<int>(record.type)) + " ";
+        buffer += std::to_string(record.YearEvent) + " ";
+        buffer += std::to_string(static_cast<int>(record.country)) + " ";
+        buffer += std::to_string(static_cast<int>(record.discipline)) + " ";
+        buffer += std::to_string(record.Place) + " ";
+        buffer += std::to_string(record.Record ? 1 : 0) + "\n";
     }
 
-    // Записываем в файл
     DWORD bytesWritten;
     BOOL writeResult = WriteFile(file, buffer.c_str(), buffer.size(), &bytesWritten, NULL);
-
     CloseHandle(file);
 
-    if (bytesWritten == buffer.size())
-    {
+    if (bytesWritten == buffer.size()) {
         m_modified = false;
         return true;
     }
-
     return false;
 }
 
@@ -266,10 +210,7 @@ void Workbase::clear()
     m_modified = false;
 }
 
-bool Workbase::isModified() const
-{
-    return m_modified;
-}
+bool Workbase::isModified() const { return m_modified; }
 
 std::string Workbase::disciplineToString(Parameters::Discipline p)
 {
@@ -288,28 +229,21 @@ std::string Workbase::disciplineToString(Parameters::Discipline p)
     }
 }
 
-void Workbase::printAllRecords() const
+std::vector<BrowserItem> Workbase::getBrowserItems() const
 {
+    std::vector<BrowserItem> result;
     std::vector<Parameters> sortedList;
-    for (const auto& pair : Db) {
-        sortedList.push_back(pair.second);
-    }
+    for (const auto& pair : Db) sortedList.push_back(pair.second);
     std::sort(sortedList.begin(), sortedList.end());
 
-    for (const Parameters& rec : sortedList) {
-        std::cout << "=================================" << std::endl;
-        std::cout << "ID: " << rec.id << std::endl;
-        std::cout << "ФИО: " << rec.FIO << std::endl;
-        std::cout << "Дата рождения: "
-            << rec.DateBirth[0] << "-"
-            << rec.DateBirth[1] << "-"
-            << rec.DateBirth[2] << std::endl;
-        std::cout << "Гражданство: " << rec.citizen << std::endl;
-        std::cout << "Тип олимпиады: " << rec.type << std::endl;
-        std::cout << "Год события: " << rec.YearEvent << std::endl;
-        std::cout << "Страна: " << rec.country << std::endl;
-        std::cout << "Дисциплина: " << disciplineToString(rec.discipline) << std::endl;
-        std::cout << "Место: " << rec.Place << std::endl;
-        std::cout << "Рекорд: " << (rec.Record ? "Да" : "Нет") << std::endl;
+    for (const Parameters& rec : sortedList)
+    {
+        BrowserItem item;
+        item.id = rec.id;
+        item.YearEvent = rec.YearEvent;
+        item.disciplineInt = static_cast<int>(rec.discipline);  // Сохраняем как int
+        item.fio = rec.FIO;
+        result.push_back(item);
     }
+    return result;
 }
