@@ -23,12 +23,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupConnections();
 
-    pipe.startServer();
+//    pipe.startServer();
     QTimer::singleShot(1500, &pipe, &Pipe::connectPipe);
     connect(&pipe, &Pipe::connected, this, &MainWindow::onConnected);
     connect(&pipe, &Pipe::connectionFailed, this, [this](const QString& err) {
         QMessageBox::warning(this, "Ошибка", err);
     });
+    connect(&pipe, &Pipe::dataChanged, this, &MainWindow::onDataChanged);
 }
 
 MainWindow::~MainWindow()
@@ -85,8 +86,17 @@ void MainWindow::onConnected()
     // Первый токен - это количество записей
     int count = std::stoi(allTokens[0]);
 
+    // Второй токен может быть версией (V1, V2 и т.д.)
+    int index = 1;
+
+    // Проверяем, есть ли токен с версией (начинается с 'V')
+    if (index < allTokens.size() && !allTokens[index].empty() && allTokens[index][0] == 'V')
+    {
+        // Пропускаем токен версии
+        index++;
+    }
+
     // Остальные токены - это данные записей (4 поля на запись)
-    int index = 1; // начинаем со следующего после count
     for (int i = 0; i < count; i++)
     {
         // Проверяем, что у нас есть достаточно токенов для записи
@@ -107,6 +117,43 @@ void MainWindow::onConnected()
         ui->lw_browser->setCurrentRow(0);  // 0 - заголовок
 
     ui->pb_fill->setVisible(true);
+}
+
+void MainWindow::onDataChanged()
+{
+    // Данные изменились на сервере - обновляем без потери текущего выделения
+    if (loadingInProgress) return;
+
+    int currentRow = ui->lw_browser->currentRow();
+    int currentIdBefore = -1;
+
+    // Сохраняем текущий ID
+    if (currentRow > 0 && currentRow - 1 < displayedRecords.size())
+    {
+        currentIdBefore = displayedRecords[currentRow - 1].id;
+    }
+
+    // Загружаем обновленный список
+    loadAllRecords();
+
+    // Восстанавливаем выделение
+    if (currentIdBefore != -1)
+    {
+        for (int i = 1; i < ui->lw_browser->count(); i++)
+        {
+            if (ui->lw_browser->item(i)->data(Qt::UserRole).toInt() == currentIdBefore)
+            {
+                ui->lw_browser->setCurrentRow(i);
+
+                // Если запись та же самая, обновляем отображаемые данные
+                if (i == currentRow)
+                {
+                    onShowCurrentRecord(i);
+                }
+                break;
+            }
+        }
+    }
 }
 
 void MainWindow::updateList()
@@ -392,8 +439,17 @@ void MainWindow::loadAllRecords()
     // Первый токен - это количество записей
     int count = std::stoi(allTokens[0]);
 
-    // Остальные токены - это данные записей (4 поля на запись)
+    // Второй токен может быть версией (V1, V2 и т.д.)
     int index = 1;
+
+    // Проверяем, есть ли токен с версией (начинается с 'V')
+    if (index < allTokens.size() && !allTokens[index].empty() && allTokens[index][0] == 'V')
+    {
+        // Пропускаем токен версии
+        index++;
+    }
+
+    // Остальные токены - это данные записей (4 поля на запись)
     for (int i = 0; i < count; i++)
     {
         if (index + 3 >= allTokens.size()) break;

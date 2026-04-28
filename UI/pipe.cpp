@@ -1,20 +1,28 @@
 #include "pipe.h"
 #include <QDebug>
 #include <sstream>
+#include <QTimer>
 
 Pipe::Pipe(QObject *parent)
     : QObject(parent)
     , channel(INVALID_HANDLE_VALUE)
     , isConnected(false)
+    , dataVersion(-1)
 {
     reconnectTimer = new QTimer(this);
     reconnectTimer->setSingleShot(true);
     connect(reconnectTimer, &QTimer::timeout, this, &Pipe::connectPipe);
+
+    // Таймер для периодической проверки версии данных
+    updateTimer = new QTimer(this);
+    updateTimer->setInterval(2000); // Проверяем каждые 2 секунды
+    connect(updateTimer, &QTimer::timeout, this, &Pipe::checkForUpdates);
 }
 
 Pipe::~Pipe()
 {
     if (reconnectTimer) reconnectTimer->stop();
+    if (updateTimer) updateTimer->stop();
     if (channel != INVALID_HANDLE_VALUE) CloseHandle(channel);
 }
 
@@ -26,7 +34,6 @@ void Pipe::startServer()
     ZeroMemory(&pi, sizeof(pi));
     si.cb = sizeof(si);
 
-    // Путь к серверу (изменяйте под свою структуру)
     WCHAR cmdLine[] = L"../server2/x64/Debug/server2.exe";
 
     if (!CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
@@ -59,7 +66,35 @@ void Pipe::connectPipe()
 
     qDebug() << "Connected to server!";
     isConnected = true;
+
+    // Запускаем таймер обновления после подключения
+    updateTimer->start();
+
     emit connected();
+}
+
+void Pipe::checkForUpdates()
+{
+    if (!isConnected || channel == INVALID_HANDLE_VALUE) return;
+
+    std::string response = sendCommand("GET_VERSION");
+
+    if (response.substr(0, 8) == "VERSION|")
+    {
+        int newVersion = std::stoi(response.substr(8));
+
+        if (newVersion != dataVersion)
+        {
+            qDebug() << "Data version changed from" << dataVersion << "to" << newVersion;
+            dataVersion = newVersion;
+            emit dataChanged();
+        }
+    }
+    else if (response.find("ERROR") == std::string::npos)
+    {
+        // Сервер старой версии, все равно обновляем
+        emit dataChanged();
+    }
 }
 
 std::string Pipe::sendCommand(const std::string& cmd)
@@ -73,8 +108,18 @@ std::string Pipe::sendCommand(const std::string& cmd)
         DWORD error = GetLastError();
         qDebug() << "Write failed:" << error;
         isConnected = false;
+        updateTimer->stop();
         connectPipe();
         return "ERROR|Write failed";
+    }
+
+    if (bytesWritten != cmd.length())
+    {
+        qDebug() << "WriteFile: only" << bytesWritten << "of" << cmd.length() << "bytes written";
+        isConnected = false;
+        updateTimer->stop();
+        connectPipe();
+        return "ERROR|Incomplete write";
     }
 
     char buffer[65536];
@@ -84,10 +129,27 @@ std::string Pipe::sendCommand(const std::string& cmd)
         DWORD error = GetLastError();
         qDebug() << "Read failed:" << error;
         isConnected = false;
+        updateTimer->stop();
         connectPipe();
         return "ERROR|Read failed";
     }
 
     buffer[bytesRead] = '\0';
-    return std::string(buffer);
+    std::string response(buffer);
+
+    // Обновляем версию данных из ответа, если есть
+    size_t vPos = response.find("|V");
+    if (vPos != std::string::npos)
+    {
+        try {
+            dataVersion = std::stoi(response.substr(vPos + 2));
+        } catch (...) {}
+    }
+
+    return response;
+}
+
+void Pipe::updateDataVersion(int version)
+{
+    dataVersion = version;
 }

@@ -233,7 +233,8 @@ std::vector<BrowserItem> Workbase::getBrowserItems() const
 {
     std::vector<BrowserItem> result;
     std::vector<Parameters> sortedList;
-    for (const auto& pair : Db) sortedList.push_back(pair.second);
+    for (const auto& pair : Db)
+        sortedList.push_back(pair.second);
     std::sort(sortedList.begin(), sortedList.end());
 
     for (const Parameters& rec : sortedList)
@@ -241,7 +242,7 @@ std::vector<BrowserItem> Workbase::getBrowserItems() const
         BrowserItem item;
         item.id = rec.id;
         item.YearEvent = rec.YearEvent;
-        item.disciplineInt = static_cast<int>(rec.discipline);  // Сохраняем как int
+        item.disciplineInt = static_cast<int>(rec.discipline);
         item.fio = rec.FIO;
         result.push_back(item);
     }

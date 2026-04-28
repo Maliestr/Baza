@@ -37,6 +37,7 @@ private slots:
     void onOlympiadChanged(int row);
     void saveFile();
     void loadFile();
+    void onDataChanged();
 
 private:
     Ui::MainWindow *ui;
